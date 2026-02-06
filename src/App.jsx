@@ -191,7 +191,7 @@ const CameraAIView = ({ onAlert, isDark }) => {
   const [model, setModel] = useState(null);
   const [isDetecting, setIsDetecting] = useState(false);
   const detectionTimeout = useRef(null);
-
+  const lastSeenRef = useRef(0);
   // Load Model on Mount
   useEffect(() => {
       const loadModel = async () => {
@@ -209,26 +209,31 @@ const CameraAIView = ({ onAlert, isDark }) => {
           
           // Check for specific hazards
           const hazard = predictions.find(p => 
-            (p.class === 'knife' || p.class === 'fire') && p.score > 0.50
+            (p.class === 'knife' || p.class === 'fire') && p.score > 0.45 
           );
-
+        
+          // 2. Insert the new logic block here
           if (hazard) {
-              // If a hazard is seen, start a 2-second countdown
-              if (!detectionTimeout.current) {
-                  console.log(`Potential hazard detected: ${hazard.class}. Verifying...`);
-                  detectionTimeout.current = setTimeout(() => {
-                      onAlert(`AI DETECTED: ${hazard.class.toUpperCase()}`);
-                      detectionTimeout.current = null;
-                  }, 2000); 
-              }
+            lastSeenRef.current = Date.now(); 
+            
+            if (!detectionTimeout.current) {
+              detectionTimeout.current = setTimeout(() => {
+                // If the hazard was seen within the last 500ms, trigger SOS
+                if (Date.now() - lastSeenRef.current < 500) {
+                  onAlert(`AI DETECTED: ${hazard.class.toUpperCase()}`);
+                }
+                detectionTimeout.current = null;
+              }, 2000);
+            }
           } else {
-              // Clear timeout if hazard leaves the frame
+            // Wait 1 full second before resetting the timer to handle "blinking"
+            if (Date.now() - lastSeenRef.current > 1000) { 
               if (detectionTimeout.current) {
-                  clearTimeout(detectionTimeout.current);
-                  detectionTimeout.current = null;
+                clearTimeout(detectionTimeout.current);
+                detectionTimeout.current = null;
               }
+            }
           }
-      }
       requestAnimationFrame(detectFrame);
   };
 
