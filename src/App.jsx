@@ -204,39 +204,35 @@ const CameraAIView = ({ onAlert, isDark }) => {
 
   // Detection Logic
   const detectFrame = async () => {
-      if (model && videoRef.current && videoRef.current.readyState === 4) {
-          const predictions = await model.detect(videoRef.current);
-          
-          // Check for specific hazards
-          const hazard = predictions.find(p => 
-            (p.class === 'knife' || p.class === 'fire') && p.score > 0.45 
-          );
+    if (model && videoRef.current && videoRef.current.readyState === 4) {
+        const predictions = await model.detect(videoRef.current);
         
-          // 2. Insert the new logic block here
-          if (hazard) {
-            lastSeenRef.current = Date.now(); 
-            
-            if (!detectionTimeout.current) {
-              detectionTimeout.current = setTimeout(() => {
-                // If the hazard was seen within the last 500ms, trigger SOS
-                if (Date.now() - lastSeenRef.current < 500) {
-                  onAlert(`AI DETECTED: ${hazard.class.toUpperCase()}`);
-                }
-                detectionTimeout.current = null;
-              }, 2000);
-            }
-          } else {
-            // Wait 1 full second before resetting the timer to handle "blinking"
-            if (Date.now() - lastSeenRef.current > 1000) { 
-              if (detectionTimeout.current) {
-                clearTimeout(detectionTimeout.current);
-                detectionTimeout.current = null;
+        const hazard = predictions.find(p => 
+          (p.class === 'knife' || p.class === 'fire') && p.score > 0.45 
+        );
+      
+        if (hazard) {
+          lastSeenRef.current = Date.now(); 
+          
+          if (!detectionTimeout.current) {
+            detectionTimeout.current = setTimeout(() => {
+              if (Date.now() - lastSeenRef.current < 500) {
+                onAlert(`AI DETECTED: ${hazard.class.toUpperCase()}`);
               }
+              detectionTimeout.current = null;
+            }, 2000);
+          }
+        } else {
+          if (Date.now() - lastSeenRef.current > 1000) { 
+            if (detectionTimeout.current) {
+              clearTimeout(detectionTimeout.current);
+              detectionTimeout.current = null;
             }
           }
-      requestAnimationFrame(detectFrame);
-  };
-
+        }
+    }
+    requestAnimationFrame(detectFrame);
+};
   useEffect(() => {
       let stream = null;
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
