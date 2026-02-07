@@ -570,7 +570,6 @@ export default function SurakshaSphereApp() {
 
 // 2. Inside your SurakshaSphereApp component  // --- LOGIC: EMERGENCY TRIGGER ---
 const triggerEmergency = useCallback((type) => {
-  // 1. First, define the OS-specific separator
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const separator = isIOS ? ';' : '?';
 
@@ -580,23 +579,18 @@ const triggerEmergency = useCallback((type) => {
     const time = new Date().toLocaleTimeString();
     const locString = location ? `${location.latitude},${location.longitude}` : 'Unknown Location';
     
-    // Update Alerts
     setAlerts(prevAlerts => [{ id: Date.now(), type, time, read: false }, ...prevAlerts]);
     
-    // Haptic Feedback
     if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); 
 
-    // 2. Build the SMS Link
+    // --- AUTO-LAUNCH SMS LOGIC ---
     const primaryContact = contacts.length > 0 ? contacts[0].number : '112';
-    const smsBody = encodeURIComponent(
-      `EMERGENCY SOS: ${type}. Track me at: http://googleusercontent.com/maps.google.com/q=${locString}`
-    );
-
-    // Now 'separator' is guaranteed to be defined here
+    const mapsUrl = `http://google.com/maps?q=${locString}`;
+    const smsBody = encodeURIComponent(`EMERGENCY SOS: ${type}. Track me at: ${mapsUrl}`);
     const smsUrl = `sms:${primaryContact}${separator}body=${smsBody}`;
-    
-    // 3. Fire the SMS protocol
-   
+
+    // This line opens the messaging app automatically
+    window.location.assign(smsUrl); 
 
     return true;
   });
